@@ -284,7 +284,7 @@ public class FlingVideoManager {
             metadata.putString(MediaMetadata.KEY_TITLE, "Tears Of Steel");
 
             mMediaInfo = new MediaInfo.Builder(
-                    "http://fling.infthink.com/droidream/samples/TearsOfSteel.mp4")
+                    "http://fling.matchstick.tv/droidream/samples/TearsOfSteel.mp4")
                     .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                     .setContentType("video/mp4").setMetadata(metadata).build();
             return;
