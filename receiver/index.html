@@ -1,0 +1,154 @@
+<html>
+<head>
+    <title>Cast Media Player</title>
+    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8"/>
+    <meta http-equiv="cache-control" content="max-age=0"/>
+    <meta http-equiv="cache-control" content="no-cache"/>
+    <meta http-equiv="expires" content="0"/>
+    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+    <meta http-equiv="pragma" content="no-cache"/>
+    <script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="http://castapp.infthink.com/sdk/libs/receiver/google/2.0.0/cast_receiver.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            background-color: #000;
+        }
+
+        h1 {
+            font-family: arial, sans-serif;
+            font-size: 32px;
+            color: #fff;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            padding: 20px 50px 20px 50px;
+            background-color: #000;
+            opacity: 0.50;
+            filter: alpha(opacity=50);
+            z-index: 2;
+        }
+
+        .videoContainer {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .videoContainer video {
+            width: 100%;
+            height: auto;
+            min-width: 100%;
+            min-height: 100%;
+        }
+    </style>
+</head>
+<body>
+<div class="overlay">
+    <h1 id="label">PAGE READY</h1>
+</div>
+<div class="videoContainer">
+    <video id="media" controls="controls" autoplay="true">
+        Your browser does not support the video tag.
+    </video>
+</div>
+<script>
+    window.onload = function () {
+        cast.receiver.logger.setLevelValue(cast.receiver.LoggerLevel.DEBUG);
+
+        window.mediaElement = document.getElementById('media');
+
+        window.mediaManager = new cast.receiver.MediaManager(window.mediaElement);
+
+        $(document).ready(function () {
+            $("#label").text("PAGE READY " + (new Date()).toString());
+            console.log($("#label").html());
+        });
+
+        // Processes the play event.
+        window.mediaManager['_onPlay'] = window.mediaManager.onPlay;
+        window.mediaManager.onPlay = function (event) {
+            $("#label").text("ON PLAY");
+            window.mediaManager['_onPlay'](event);
+        }
+
+        // If provided, it processes the load event.
+        window.mediaManager['_onLoad'] = window.mediaManager.onLoad;
+        window.mediaManager.onLoad = function (event) {
+            $("#label").text("ON LOAD");
+            window.mediaManager['_onLoad'](event);
+        }
+
+        // Called when the media ends.
+        window.mediaManager['_onEnded'] = window.mediaManager.onEnded;
+        window.mediaManager.onEnded = function (event) {
+            $("#label").text("ON ENDED");
+            window.mediaManager['onEnded'](event);
+        }
+
+        // Called when there is an error not triggered by a LOAD request.
+        window.mediaManager['_onError'] = window.mediaManager.onError;
+        window.mediaManager.onError = function (event) {
+            $("#label").text("ON ERROR");
+            window.mediaManager['_onError'](event);
+        }
+
+        // onGetStatus
+        window.mediaManager['_onGetStatus'] = window.mediaManager.onGetStatus;
+        window.mediaManager.onGetStatus = function (event) {
+            $("#label").text("ON GET STATUS");
+            window.mediaManager['_onGetStatus'](event);
+        }
+
+        // onLoadMetadataError
+        window.mediaManager['_onLoadMetadataError'] = window.mediaManager.onLoadMetadataError;
+        window.mediaManager.onLoadMetadataError = function (event) {
+            $("#label").text("ON LOAD METADATA ERROR");
+            window.mediaManager['_onLoadMetadataError'](event);
+        }
+
+        // onMetadataLoaded
+        window.mediaManager['_onMetadataLoaded'] = window.mediaManager.onMetadataLoaded;
+        window.mediaManager.onMetadataLoaded = function (event) {
+            $("#label").text("ON LOAD METADATA LOADED");
+            window.mediaManager['_onMetadataLoaded'](event);
+        }
+
+        // onPause
+        window.mediaManager['_onPause'] = window.mediaManager.onPause;
+        window.mediaManager.onPause = function (event) {
+            $("#label").text("ON PAUSE");
+            window.mediaManager['_onPause'](event);
+        }
+
+        // onSeek
+        window.mediaManager['_onSeek'] = window.mediaManager.onSeek;
+        window.mediaManager.onSeek = function (event) {
+            $("#label").text("ON SEEK");
+            window.mediaManager['_onSeek'](event);
+        }
+
+        // onSetVolume
+        window.mediaManager['_onSetVolume'] = window.mediaManager.onSetVolume;
+        window.mediaManager.onSetVolume = function (event) {
+            $("#label").text("ON SET VOLUME");
+            window.mediaManager['_onSetVolume'](event);
+        }
+
+        // onStop
+        window.mediaManager['_onStop'] = window.mediaManager.onStop;
+        window.mediaManager.onStop = function (event) {
+            $("#label").text("ON STOP");
+            window.mediaManager['_onStop'](event);
+        }
+
+        window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+        window.castReceiverManager.start();
+    }
+</script>
+</body>
+</html>
