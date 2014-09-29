@@ -523,7 +523,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     }
 
     @Override
-    public void onMeidaStatusUpdated() {
+    public void onMediaStatusUpdated() {
         MediaStatus mediaStatus = this.mFlingVideoManager.getMediaStatus();
         if ((mediaStatus != null)
                 && (mediaStatus.getPlayerState() == MediaStatus.PLAYER_STATE_IDLE)) {
@@ -537,7 +537,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     }
 
     @Override
-    public void onMeidaMetadataUpdated(String title, String artist, Uri imageUrl) {
+    public void onMediaMetadataUpdated(String title, String artist, Uri imageUrl) {
         setCurrentMediaMetadata(title, artist, imageUrl);
     }
 

@@ -379,7 +379,7 @@ public class FlingVideoManager {
                     public void onStatusUpdated() {
                         Log.d(TAG, "MediaControlChannel.onStatusUpdated");
                         // If item has ended, clear metadata.
-                        mStatusChangeListener.onMeidaStatusUpdated();
+                        mStatusChangeListener.onMediaStatusUpdated();
                     }
                 });
 
@@ -412,7 +412,7 @@ public class FlingVideoManager {
                                     imageUrl = image.getUrl();
                                 }
                             }
-                            mStatusChangeListener.onMeidaMetadataUpdated(title,
+                            mStatusChangeListener.onMediaMetadataUpdated(title,
                                     artist, imageUrl);
                         }
                     }

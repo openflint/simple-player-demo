@@ -12,8 +12,8 @@ public interface FlingStatusChangeListener {
     void onConnected();
     void onNoLongerRunning(boolean isRunning);
     void onConnectionSuspended();
-    void onMeidaStatusUpdated();
-    void onMeidaMetadataUpdated(String title, String artist, Uri imageUrl);
+    void onMediaStatusUpdated();
+    void onMediaMetadataUpdated(String title, String artist, Uri imageUrl);
     void onApplicationConnectionResult(String applicationStatus);
     void onLeaveApplication();
     void onStopApplication();
