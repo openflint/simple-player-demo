@@ -58,7 +58,6 @@ public class FlingVideoManager {
     private RemoteMediaPlayer mMediaPlayer;
     private ApplicationMetadata mAppMetadata;
 
-    private boolean mRouteSelected;
     private boolean mWaitingForReconnect;
 
     public FlingVideoManager(Context context, String applicationId,
@@ -76,8 +75,7 @@ public class FlingVideoManager {
                                 .categoryForFling(mApplicationId)).build();
 
         mMediaRouterCallback = new FlingMediaRouterCallback();
-        mMediaRouter.addCallback(mMediaRouteSelector, mMediaRouterCallback,
-                MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
+        addRouterCallback();
 
         mConnectionCallbacks = new ConnectionCallbacks();
         mConnectionFailedListener = new ConnectionFailedListener();
@@ -94,14 +92,59 @@ public class FlingVideoManager {
         return mApplicationId;
     }
 
+    /**
+     * Create mediarouter button
+     * 
+     * @param menu
+     * @param menuResourceId
+     * @return
+     */
     public MenuItem addMediaRouterButton(Menu menu, int menuResourceId) {
         MenuItem mediaRouteMenuItem = menu.findItem(menuResourceId);
-        MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider)
-                MenuItemCompat.getActionProvider(mediaRouteMenuItem);
+        MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat
+                .getActionProvider(mediaRouteMenuItem);
         mediaRouteActionProvider.setRouteSelector(mMediaRouteSelector);
         return mediaRouteMenuItem;
     }
 
+    private void addRouterCallback() {
+        mMediaRouter.addCallback(mMediaRouteSelector, mMediaRouterCallback,
+                MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
+    }
+
+    public void destroy() {
+        mMediaRouter.removeCallback(mMediaRouterCallback);
+    }
+
+    /**
+     * When the user selects a device from the Fling button device list, the
+     * application is informed of the selected device by extending
+     * MediaRouter.Callback
+     * 
+     * @author changxing
+     * 
+     */
+    private class FlingMediaRouterCallback extends MediaRouter.Callback {
+        @Override
+        public void onRouteSelected(MediaRouter router, RouteInfo route) {
+            Log.d(TAG, "onRouteSelected: route=" + route);
+            FlingDevice device = FlingDevice.getFromBundle(route.getExtras());
+            onDeviceSelected(device);
+        }
+
+        @Override
+        public void onRouteUnselected(MediaRouter router, RouteInfo route) {
+            Log.d(TAG, "onRouteUnselected: route=" + route);
+            FlingDevice device = FlingDevice.getFromBundle(route.getExtras());
+            onDeviceUnselected(device);
+        }
+    }
+
+    /**
+     * Connect select device
+     * 
+     * @param device
+     */
     private void onDeviceSelected(FlingDevice device) {
         setSelectedDevice(device);
 
@@ -109,6 +152,11 @@ public class FlingVideoManager {
             mStatusChangeListener.onDeviceSelected(device.getFriendlyName());
     }
 
+    /**
+     * Disconnect device
+     * 
+     * @param device
+     */
     private void onDeviceUnselected(FlingDevice device) {
         setSelectedDevice(null);
 
@@ -143,6 +191,181 @@ public class FlingVideoManager {
         }
     }
 
+    /**
+     * FlingManager.ConnectionCallbacks and
+     * FlingManager.OnConnectionFailedListener callbacks to be informed of the
+     * connection status. All of the callbacks run on the main UI thread.
+     * 
+     * @author changxing
+     * 
+     */
+    private class ConnectionCallbacks implements
+            FlingManager.ConnectionCallbacks {
+        @Override
+        public void onConnectionSuspended(int cause) {
+            Log.d(TAG, "ConnectionCallbacks.onConnectionSuspended");
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mWaitingForReconnect = true;
+                    detachMediaPlayer();
+                    mStatusChangeListener.onConnectionSuspended();
+
+                }
+            });
+        }
+
+        @Override
+        public void onConnected(final Bundle connectionHint) {
+            Log.d(TAG, "ConnectionCallbacks.onConnected");
+            if (!mApiClient.isConnected()) {
+                return;
+            }
+            try {
+                Fling.FlingApi.requestStatus(mApiClient);
+            } catch (IOException e) {
+                Log.d(TAG, "error requesting status", e);
+            }
+
+            mStatusChangeListener.onConnected();
+
+            if (mWaitingForReconnect) {
+                mWaitingForReconnect = false;
+                if ((connectionHint != null)
+                        && connectionHint
+                                .getBoolean(Fling.EXTRA_APP_NO_LONGER_RUNNING)) {
+                    Log.d(TAG, "App  is no longer running");
+                    detachMediaPlayer();
+                    mAppMetadata = null;
+                    mStatusChangeListener.onNoLongerRunning(false);
+                } else {
+                    attachMediaPlayer();
+                    requestMediaStatus();
+                    mStatusChangeListener.onNoLongerRunning(true);
+                }
+            }
+        }
+    }
+
+    private class ConnectionFailedListener implements
+            FlingManager.OnConnectionFailedListener {
+        @Override
+        public void onConnectionFailed(ConnectionResult result) {
+            Log.d(TAG, "onConnectionFailed");
+            mStatusChangeListener.onConnectionFailed();
+        }
+    }
+
+    /**
+     * The Fling.Listener callbacks are used to inform the sender application
+     * about receiver application events.
+     * 
+     * @author changxing
+     * 
+     */
+    private class FlingListener extends Fling.Listener {
+        @Override
+        public void onVolumeChanged() {
+            double volume = Fling.FlingApi.getVolume(mApiClient);
+            boolean isMute = Fling.FlingApi.isMute(mApiClient);
+            mStatusChangeListener.onVolumeChanged(volume, isMute);
+        }
+
+        @Override
+        public void onApplicationStatusChanged() {
+            String status = Fling.FlingApi.getApplicationStatus(mApiClient);
+            Log.d(TAG, "onApplicationStatusChanged; status=" + status);
+            mStatusChangeListener.onApplicationStatusChanged(status);
+        }
+
+        @Override
+        public void onApplicationDisconnected(int statusCode) {
+            Log.d(TAG, "onApplicationDisconnected: statusCode=" + statusCode);
+            mAppMetadata = null;
+            detachMediaPlayer();
+            mStatusChangeListener.onApplicationDisconnected();
+            if (statusCode != FlingStatusCodes.SUCCESS) {
+                // This is an unexpected disconnect.
+                mStatusChangeListener.onApplicationStatusChanged(mContext
+                        .getString(R.string.status_app_disconnected));
+            }
+        }
+    }
+
+    /**
+     * Launch receiver application.
+     */
+    public void launchApplication() {
+        if (!mApiClient.isConnected()) {
+            return;
+        }
+
+        Fling.FlingApi.launchApplication(mApiClient, getAppId(), true)
+                .setResultCallback(
+                        new ApplicationConnectionResultCallback("LaunchApp"));
+    }
+
+    /**
+     * Join to receiver application.
+     */
+    public void joinApplication() {
+        if (!mApiClient.isConnected()) {
+            return;
+        }
+
+        Fling.FlingApi.joinApplication(mApiClient, getAppId())
+                .setResultCallback(
+                        new ApplicationConnectionResultCallback(
+                                "JoinApplication"));
+    }
+
+    /**
+     * Leave to receiver application.
+     */
+    public void leaveApplication() {
+        if (!mApiClient.isConnected()) {
+            return;
+        }
+
+        Fling.FlingApi.leaveApplication(mApiClient).setResultCallback(
+                new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(Status result) {
+                        if (result.isSuccess()) {
+                            mAppMetadata = null;
+                            detachMediaPlayer();
+                            mStatusChangeListener.onLeaveApplication();
+                        }
+                    }
+                });
+    }
+
+    /**
+     * Stop receiver application.
+     */
+    public void stopApplication() {
+        if (!mApiClient.isConnected()) {
+            return;
+        }
+
+        Fling.FlingApi.stopApplication(mApiClient).setResultCallback(
+                new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(Status result) {
+                        if (result.isSuccess()) {
+                            mAppMetadata = null;
+                            detachMediaPlayer();
+                            mStatusChangeListener.onStopApplication();
+                            // updateButtonStates();
+                        }
+                    }
+                });
+    }
+
+    /**
+     * To use the media channel create an instance of RemoteMediaPlayer and set
+     * the update listeners to receive media status updates.
+     */
     private void attachMediaPlayer() {
         if (mMediaPlayer != null) {
             return;
@@ -215,64 +438,11 @@ public class FlingVideoManager {
         mMediaPlayer = null;
     }
 
-    public void launchApplication() {
-        if (!mApiClient.isConnected()) {
-            return;
-        }
-
-        Fling.FlingApi.launchApplication(mApiClient, getAppId(), false)
-                .setResultCallback(
-                        new ApplicationConnectionResultCallback("LaunchApp"));
-    }
-
-    public void joinApplication() {
-        if (!mApiClient.isConnected()) {
-            return;
-        }
-
-        Fling.FlingApi.joinApplication(mApiClient, getAppId())
-                .setResultCallback(
-                        new ApplicationConnectionResultCallback(
-                                "JoinApplication"));
-    }
-
-    public void leaveApplication() {
-        if (!mApiClient.isConnected()) {
-            return;
-        }
-
-        Fling.FlingApi.leaveApplication(mApiClient).setResultCallback(
-                new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(Status result) {
-                        if (result.isSuccess()) {
-                            mAppMetadata = null;
-                            detachMediaPlayer();
-                            mStatusChangeListener.onLeaveApplication();
-                        }
-                    }
-                });
-    }
-
-    public void stopApplication() {
-        if (!mApiClient.isConnected()) {
-            return;
-        }
-
-        Fling.FlingApi.stopApplication(mApiClient).setResultCallback(
-                new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(Status result) {
-                        if (result.isSuccess()) {
-                            mAppMetadata = null;
-                            detachMediaPlayer();
-                            mStatusChangeListener.onStopApplication();
-                            // updateButtonStates();
-                        }
-                    }
-                });
-    }
-
+    /**
+     * Fling the media to receiver
+     * 
+     * @param autoPlay
+     */
     public void loadMedia(boolean autoPlay) {
         if (mAppMetadata == null) {
             return;
@@ -287,7 +457,6 @@ public class FlingVideoManager {
                     "http://fling.matchstick.tv/droidream/samples/TearsOfSteel.mp4")
                     .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                     .setContentType("video/mp4").setMetadata(metadata).build();
-            return;
         }
         Log.d(TAG, "playMedia: " + mMediaInfo);
 
@@ -417,155 +586,6 @@ public class FlingVideoManager {
                 });
     }
 
-    public boolean isDeviceConnectioned() {
-        return (mApiClient != null) && mApiClient.isConnected()
-                && !mWaitingForReconnect;
-    }
-
-    public boolean isAppConnectioned() {
-        return (mAppMetadata != null) && !mWaitingForReconnect;
-    }
-
-    public boolean isMediaConnectioned() {
-        return (mMediaPlayer != null) && !mWaitingForReconnect;
-    }
-
-    public long getMediaCurrentTime() {
-        if (mMediaPlayer != null)
-            return mMediaPlayer.getApproximateStreamPosition();
-        return 0;
-    }
-
-    public long getMediaDuration() {
-        if (mMediaPlayer != null)
-            return mMediaPlayer.getStreamDuration();
-        return 0;
-    }
-    
-    public void destroy() {
-        mMediaRouter.removeCallback(mMediaRouterCallback);
-    }
-
-    private class FlingMediaRouterCallback extends MediaRouter.Callback {
-        @Override
-        public void onRouteSelected(MediaRouter router, RouteInfo route) {
-            Log.d(TAG, "onRouteSelected: route=" + route);
-            mRouteSelected = true;
-            FlingDevice device = FlingDevice.getFromBundle(route.getExtras());
-            onDeviceSelected(device);
-        }
-
-        @Override
-        public void onRouteUnselected(MediaRouter router, RouteInfo route) {
-            Log.d(TAG, "onRouteUnselected: route=" + route);
-            mRouteSelected = false;
-            FlingDevice device = FlingDevice.getFromBundle(route.getExtras());
-            onDeviceUnselected(device);
-        }
-    }
-
-    private class ConnectionCallbacks implements
-            FlingManager.ConnectionCallbacks {
-        @Override
-        public void onConnectionSuspended(int cause) {
-            Log.d(TAG, "ConnectionCallbacks.onConnectionSuspended");
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mWaitingForReconnect = true;
-                    detachMediaPlayer();
-                    mStatusChangeListener.onConnectionSuspended();
-
-                }
-            });
-        }
-
-        @Override
-        public void onConnected(final Bundle connectionHint) {
-            Log.d(TAG, "ConnectionCallbacks.onConnected");
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (!mApiClient.isConnected()) {
-                        return;
-                    }
-                    try {
-                        Fling.FlingApi.requestStatus(mApiClient);
-                    } catch (IOException e) {
-                        Log.d(TAG, "error requesting status", e);
-                    }
-
-                    mStatusChangeListener.onConnected();
-
-                    if (mWaitingForReconnect) {
-                        mWaitingForReconnect = false;
-                        if ((connectionHint != null)
-                                && connectionHint
-                                        .getBoolean(Fling.EXTRA_APP_NO_LONGER_RUNNING)) {
-                            Log.d(TAG, "App  is no longer running");
-                            detachMediaPlayer();
-                            mAppMetadata = null;
-                            mStatusChangeListener.onNoLongerRunning(false);
-                        } else {
-                            attachMediaPlayer();
-                            requestMediaStatus();
-                            mStatusChangeListener.onNoLongerRunning(true);
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    private class ConnectionFailedListener implements
-            FlingManager.OnConnectionFailedListener {
-        @Override
-        public void onConnectionFailed(ConnectionResult result) {
-            Log.d(TAG, "onConnectionFailed");
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mStatusChangeListener.onConnectionFailed();
-                }
-            });
-        }
-    }
-
-    private class FlingListener extends Fling.Listener {
-        @Override
-        public void onVolumeChanged() {
-            double volume = Fling.FlingApi.getVolume(mApiClient);
-            boolean isMute = Fling.FlingApi.isMute(mApiClient);
-            mStatusChangeListener.onVolumeChanged(volume, isMute);
-        }
-
-        @Override
-        public void onApplicationStatusChanged() {
-            String status = Fling.FlingApi.getApplicationStatus(mApiClient);
-            Log.d(TAG, "onApplicationStatusChanged; status=" + status);
-            mStatusChangeListener.onApplicationStatusChanged(status);
-        }
-
-        @Override
-        public void onApplicationDisconnected(int statusCode) {
-            Log.d(TAG, "onApplicationDisconnected: statusCode=" + statusCode);
-            mAppMetadata = null;
-            detachMediaPlayer();
-            mStatusChangeListener.onApplicationDisconnected();
-            if (statusCode != FlingStatusCodes.SUCCESS) {
-                // This is an unexpected disconnect.
-                mStatusChangeListener.onApplicationStatusChanged(mContext
-                        .getString(R.string.status_app_disconnected));
-            }
-        }
-    }
-
-    public MediaStatus getMediaStatus() {
-        if (this.mMediaPlayer != null)
-            return this.mMediaPlayer.getMediaStatus();
-        return null;
-    }
-
     private final class ApplicationConnectionResultCallback implements
             ResultCallback<Fling.ApplicationConnectionResult> {
         private final String mClassTag;
@@ -622,5 +642,36 @@ public class FlingVideoManager {
 
         protected void onFinished() {
         }
+    }
+
+    public boolean isDeviceConnectioned() {
+        return (mApiClient != null) && mApiClient.isConnected()
+                && !mWaitingForReconnect;
+    }
+
+    public boolean isAppConnectioned() {
+        return (mAppMetadata != null) && !mWaitingForReconnect;
+    }
+
+    public boolean isMediaConnectioned() {
+        return (mMediaPlayer != null) && !mWaitingForReconnect;
+    }
+
+    public long getMediaCurrentTime() {
+        if (mMediaPlayer != null)
+            return mMediaPlayer.getApproximateStreamPosition();
+        return 0;
+    }
+
+    public long getMediaDuration() {
+        if (mMediaPlayer != null)
+            return mMediaPlayer.getStreamDuration();
+        return 0;
+    }
+
+    public MediaStatus getMediaStatus() {
+        if (this.mMediaPlayer != null)
+            return this.mMediaPlayer.getMediaStatus();
+        return null;
     }
 }
