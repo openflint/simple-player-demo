@@ -83,13 +83,8 @@ public class FlingVideoManager {
         mFlingListener = new FlingListener();
     }
 
-    private String getAppId() {
-        if (mSelectedDevice != null && mApplicationId.startsWith("app:?")) {
-            if ("Chromecast".equals(mSelectedDevice.getModelName())) {
-                return FlingMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID;
-            }
-        }
-        return mApplicationId;
+    private String getAppUrl() {
+        return "http://openflint.github.io/simple-player-demo/receiver/index.html";
     }
 
     /**
@@ -300,7 +295,7 @@ public class FlingVideoManager {
             return;
         }
 
-        Fling.FlingApi.launchApplication(mApiClient, getAppId(), true)
+        Fling.FlingApi.launchApplication(mApiClient, getAppUrl(), true)
                 .setResultCallback(
                         new ApplicationConnectionResultCallback("LaunchApp"));
     }
@@ -313,7 +308,7 @@ public class FlingVideoManager {
             return;
         }
 
-        Fling.FlingApi.joinApplication(mApiClient, getAppId())
+        Fling.FlingApi.joinApplication(mApiClient, getAppUrl())
                 .setResultCallback(
                         new ApplicationConnectionResultCallback(
                                 "JoinApplication"));
@@ -603,14 +598,7 @@ public class FlingVideoManager {
             if (status.isSuccess()) {
                 ApplicationMetadata applicationMetadata = result
                         .getApplicationMetadata();
-                String sessionId = result.getSessionId();
                 String applicationStatus = result.getApplicationStatus();
-                boolean wasLaunched = result.getWasLaunched();
-                Log.d(mClassTag,
-                        "application name: " + applicationMetadata.getName()
-                                + ", status: " + applicationStatus
-                                + ", sessionId: " + sessionId
-                                + ", wasLaunched: " + wasLaunched);
 
                 mStatusChangeListener
                         .onApplicationConnectionResult(applicationStatus);

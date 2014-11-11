@@ -101,7 +101,8 @@ public class VideoPlayerActivity extends ActionBarActivity implements
 
         mHandler = new Handler();
 
-        String applicationId = Fling.FlingApi.makeApplicationId("http://fling.matchstick.tv/receiver/simpleplayer/index.html");
+        String applicationId = "~samplemediaplayer";
+        Fling.FlingApi.setApplicationId(applicationId);
         mFlingVideoManager = new FlingVideoManager(this, applicationId, this);
         
         setUpControls();
