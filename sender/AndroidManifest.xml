@@ -35,12 +35,6 @@
             </intent-filter>
         </service>
 
-        <service android:name="tv.matchstick.fling.service.FlingService" android:exported="false">
-            <intent-filter>
-                <action android:name="tv.matchstick.fling.service.FLING" />
-            </intent-filter>
-        </service>
-
     </application>
 
 </manifest>
