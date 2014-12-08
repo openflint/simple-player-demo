@@ -1,8 +1,8 @@
-package com.infthink.fling.samples.videoplayer;
+package com.infthink.flint.samples.videoplayer;
 
 import android.net.Uri;
 
-public interface FlingStatusChangeListener {
+public interface FlintStatusChangeListener {
     void onDeviceSelected(String name);
     void onDeviceUnselected();
     void onVolumeChanged(double percent, boolean muted);
@@ -18,4 +18,5 @@ public interface FlingStatusChangeListener {
     void onLeaveApplication();
     void onStopApplication();
     void onMediaSeekEnd();
+    void onMediaVolumeEnd();
 }

@@ -1,24 +1,26 @@
-package com.infthink.fling.samples.videoplayer;
+package com.infthink.flint.samples.videoplayer;
 
 import java.io.IOException;
 import java.util.List;
 
-import tv.matchstick.fling.ApplicationMetadata;
-import tv.matchstick.fling.ConnectionResult;
-import tv.matchstick.fling.Fling;
-import tv.matchstick.fling.FlingDevice;
-import tv.matchstick.fling.FlingManager;
-import tv.matchstick.fling.FlingMediaControlIntent;
-import tv.matchstick.fling.FlingStatusCodes;
-import tv.matchstick.fling.MediaInfo;
-import tv.matchstick.fling.MediaMetadata;
-import tv.matchstick.fling.MediaStatus;
-import tv.matchstick.fling.RemoteMediaPlayer;
-import tv.matchstick.fling.ResultCallback;
-import tv.matchstick.fling.Status;
-import tv.matchstick.fling.Fling.ApplicationConnectionResult;
-import tv.matchstick.fling.RemoteMediaPlayer.MediaChannelResult;
-import tv.matchstick.fling.images.WebImage;
+import com.infthink.flint.samples.videoplayer.R;
+
+import tv.matchstick.flint.ApplicationMetadata;
+import tv.matchstick.flint.ConnectionResult;
+import tv.matchstick.flint.Flint;
+import tv.matchstick.flint.FlintDevice;
+import tv.matchstick.flint.FlintManager;
+import tv.matchstick.flint.FlintMediaControlIntent;
+import tv.matchstick.flint.FlintStatusCodes;
+import tv.matchstick.flint.MediaInfo;
+import tv.matchstick.flint.MediaMetadata;
+import tv.matchstick.flint.MediaStatus;
+import tv.matchstick.flint.RemoteMediaPlayer;
+import tv.matchstick.flint.ResultCallback;
+import tv.matchstick.flint.Status;
+import tv.matchstick.flint.Flint.ApplicationConnectionResult;
+import tv.matchstick.flint.RemoteMediaPlayer.MediaChannelResult;
+import tv.matchstick.flint.images.WebImage;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
@@ -33,8 +35,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class FlingVideoManager {
-    private static final String TAG = FlingVideoManager.class.getSimpleName();
+public class FlintVideoManager {
+    private static final String TAG = FlintVideoManager.class.getSimpleName();
 
     public static final double VOLUME_INCREMENT = 0.05;
     public static final double MAX_VOLUME_LEVEL = 20;
@@ -43,16 +45,15 @@ public class FlingVideoManager {
     private Handler mHandler;
     private String mApplicationId;
 
-    private FlingStatusChangeListener mStatusChangeListener;
+    private FlintStatusChangeListener mStatusChangeListener;
 
     private MediaRouter mMediaRouter;
     private MediaRouteSelector mMediaRouteSelector;
-    private FlingMediaRouterCallback mMediaRouterCallback;
-    private FlingDevice mSelectedDevice;
-    private FlingManager mApiClient;
-    private FlingListener mFlingListener;
+    private FlintMediaRouterCallback mMediaRouterCallback;
+    private FlintDevice mSelectedDevice;
+    private FlintManager mApiClient;
+    private FlintListener mFlintListener;
     private ConnectionCallbacks mConnectionCallbacks;
-    private ConnectionFailedListener mConnectionFailedListener;
 
     private MediaInfo mMediaInfo;
     private RemoteMediaPlayer mMediaPlayer;
@@ -60,8 +61,8 @@ public class FlingVideoManager {
 
     private boolean mWaitingForReconnect;
 
-    public FlingVideoManager(Context context, String applicationId,
-            FlingStatusChangeListener listener) {
+    public FlintVideoManager(Context context, String applicationId,
+            FlintStatusChangeListener listener) {
         mContext = context;
         mHandler = new Handler(Looper.getMainLooper());
         mApplicationId = applicationId;
@@ -71,16 +72,15 @@ public class FlingVideoManager {
         mMediaRouter = MediaRouter.getInstance(context);
         mMediaRouteSelector = new MediaRouteSelector.Builder()
                 .addControlCategory(
-                        FlingMediaControlIntent
-                                .categoryForFling(mApplicationId)).build();
+                        FlintMediaControlIntent
+                                .categoryForFlint(mApplicationId)).build();
 
-        mMediaRouterCallback = new FlingMediaRouterCallback();
+        mMediaRouterCallback = new FlintMediaRouterCallback();
         addRouterCallback();
 
         mConnectionCallbacks = new ConnectionCallbacks();
-        mConnectionFailedListener = new ConnectionFailedListener();
 
-        mFlingListener = new FlingListener();
+        mFlintListener = new FlintListener();
     }
 
     private String getAppUrl() {
@@ -112,25 +112,25 @@ public class FlingVideoManager {
     }
 
     /**
-     * When the user selects a device from the Fling button device list, the
+     * When the user selects a device from the Flint button device list, the
      * application is informed of the selected device by extending
      * MediaRouter.Callback
      * 
      * @author changxing
      * 
      */
-    private class FlingMediaRouterCallback extends MediaRouter.Callback {
+    private class FlintMediaRouterCallback extends MediaRouter.Callback {
         @Override
         public void onRouteSelected(MediaRouter router, RouteInfo route) {
             Log.d(TAG, "onRouteSelected: route=" + route);
-            FlingDevice device = FlingDevice.getFromBundle(route.getExtras());
+            FlintDevice device = FlintDevice.getFromBundle(route.getExtras());
             onDeviceSelected(device);
         }
 
         @Override
         public void onRouteUnselected(MediaRouter router, RouteInfo route) {
             Log.d(TAG, "onRouteUnselected: route=" + route);
-            FlingDevice device = FlingDevice.getFromBundle(route.getExtras());
+            FlintDevice device = FlintDevice.getFromBundle(route.getExtras());
             onDeviceUnselected(device);
         }
     }
@@ -140,7 +140,7 @@ public class FlingVideoManager {
      * 
      * @param device
      */
-    private void onDeviceSelected(FlingDevice device) {
+    private void onDeviceSelected(FlintDevice device) {
         setSelectedDevice(device);
 
         if (mStatusChangeListener != null)
@@ -152,14 +152,14 @@ public class FlingVideoManager {
      * 
      * @param device
      */
-    private void onDeviceUnselected(FlingDevice device) {
+    private void onDeviceUnselected(FlintDevice device) {
         setSelectedDevice(null);
 
         if (mStatusChangeListener != null)
             mStatusChangeListener.onDeviceUnselected();
     }
 
-    private void setSelectedDevice(FlingDevice device) {
+    private void setSelectedDevice(FlintDevice device) {
         mSelectedDevice = device;
 
         if (mSelectedDevice == null) {
@@ -170,15 +170,12 @@ public class FlingVideoManager {
         } else {
             Log.d(TAG, "acquiring controller for " + mSelectedDevice);
             try {
-                Fling.FlingOptions.Builder apiOptionsBuilder = Fling.FlingOptions
-                        .builder(mSelectedDevice, mFlingListener);
-                apiOptionsBuilder.setVerboseLoggingEnabled(true);
+                Flint.FlintOptions.Builder apiOptionsBuilder = Flint.FlintOptions
+                        .builder(mSelectedDevice, mFlintListener);
 
-                mApiClient = new FlingManager.Builder(mContext)
-                        .addApi(Fling.API, apiOptionsBuilder.build())
-                        .addConnectionCallbacks(mConnectionCallbacks)
-                        .addOnConnectionFailedListener(
-                                mConnectionFailedListener).build();
+                mApiClient = new FlintManager.Builder(mContext)
+                        .addApi(Flint.API, apiOptionsBuilder.build())
+                        .addConnectionCallbacks(mConnectionCallbacks).build();
                 mApiClient.connect();
             } catch (IllegalStateException e) {
                 Log.w(TAG, "error while creating a device controller", e);
@@ -187,15 +184,15 @@ public class FlingVideoManager {
     }
 
     /**
-     * FlingManager.ConnectionCallbacks and
-     * FlingManager.OnConnectionFailedListener callbacks to be informed of the
+     * FlintManager.ConnectionCallbacks and
+     * FlintManager.OnConnectionFailedListener callbacks to be informed of the
      * connection status. All of the callbacks run on the main UI thread.
      * 
      * @author changxing
      * 
      */
     private class ConnectionCallbacks implements
-            FlingManager.ConnectionCallbacks {
+            FlintManager.ConnectionCallbacks {
         @Override
         public void onConnectionSuspended(int cause) {
             Log.d(TAG, "ConnectionCallbacks.onConnectionSuspended");
@@ -217,7 +214,7 @@ public class FlingVideoManager {
                 return;
             }
             try {
-                Fling.FlingApi.requestStatus(mApiClient);
+                Flint.FlintApi.requestStatus(mApiClient);
             } catch (IOException e) {
                 Log.d(TAG, "error requesting status", e);
             }
@@ -228,7 +225,7 @@ public class FlingVideoManager {
                 mWaitingForReconnect = false;
                 if ((connectionHint != null)
                         && connectionHint
-                                .getBoolean(Fling.EXTRA_APP_NO_LONGER_RUNNING)) {
+                                .getBoolean(Flint.EXTRA_APP_NO_LONGER_RUNNING)) {
                     Log.d(TAG, "App  is no longer running");
                     detachMediaPlayer();
                     mAppMetadata = null;
@@ -240,10 +237,7 @@ public class FlingVideoManager {
                 }
             }
         }
-    }
 
-    private class ConnectionFailedListener implements
-            FlingManager.OnConnectionFailedListener {
         @Override
         public void onConnectionFailed(ConnectionResult result) {
             Log.d(TAG, "onConnectionFailed");
@@ -252,23 +246,23 @@ public class FlingVideoManager {
     }
 
     /**
-     * The Fling.Listener callbacks are used to inform the sender application
+     * The Flint.Listener callbacks are used to inform the sender application
      * about receiver application events.
      * 
      * @author changxing
      * 
      */
-    private class FlingListener extends Fling.Listener {
+    private class FlintListener extends Flint.Listener {
         @Override
         public void onVolumeChanged() {
-            double volume = Fling.FlingApi.getVolume(mApiClient);
-            boolean isMute = Fling.FlingApi.isMute(mApiClient);
+            double volume = Flint.FlintApi.getVolume(mApiClient);
+            boolean isMute = Flint.FlintApi.isMute(mApiClient);
             mStatusChangeListener.onVolumeChanged(volume, isMute);
         }
 
         @Override
         public void onApplicationStatusChanged() {
-            String status = Fling.FlingApi.getApplicationStatus(mApiClient);
+            String status = Flint.FlintApi.getApplicationStatus(mApiClient);
             Log.d(TAG, "onApplicationStatusChanged; status=" + status);
             mStatusChangeListener.onApplicationStatusChanged(status);
         }
@@ -279,7 +273,7 @@ public class FlingVideoManager {
             mAppMetadata = null;
             detachMediaPlayer();
             mStatusChangeListener.onApplicationDisconnected();
-            if (statusCode != FlingStatusCodes.SUCCESS) {
+            if (statusCode != ConnectionResult.SUCCESS) {
                 // This is an unexpected disconnect.
                 mStatusChangeListener.onApplicationStatusChanged(mContext
                         .getString(R.string.status_app_disconnected));
@@ -295,7 +289,7 @@ public class FlingVideoManager {
             return;
         }
 
-        Fling.FlingApi.launchApplication(mApiClient, getAppUrl(), true)
+        Flint.FlintApi.launchApplication(mApiClient, getAppUrl(), true)
                 .setResultCallback(
                         new ApplicationConnectionResultCallback("LaunchApp"));
     }
@@ -308,7 +302,7 @@ public class FlingVideoManager {
             return;
         }
 
-        Fling.FlingApi.joinApplication(mApiClient, getAppUrl())
+        Flint.FlintApi.joinApplication(mApiClient, getAppUrl())
                 .setResultCallback(
                         new ApplicationConnectionResultCallback(
                                 "JoinApplication"));
@@ -322,7 +316,7 @@ public class FlingVideoManager {
             return;
         }
 
-        Fling.FlingApi.leaveApplication(mApiClient).setResultCallback(
+        Flint.FlintApi.leaveApplication(mApiClient).setResultCallback(
                 new ResultCallback<Status>() {
                     @Override
                     public void onResult(Status result) {
@@ -343,7 +337,7 @@ public class FlingVideoManager {
             return;
         }
 
-        Fling.FlingApi.stopApplication(mApiClient).setResultCallback(
+        Flint.FlintApi.stopApplication(mApiClient).setResultCallback(
                 new ResultCallback<Status>() {
                     @Override
                     public void onResult(Status result) {
@@ -373,7 +367,6 @@ public class FlingVideoManager {
                     @Override
                     public void onStatusUpdated() {
                         Log.d(TAG, "MediaControlChannel.onStatusUpdated");
-                        // If item has ended, clear metadata.
                         mStatusChangeListener.onMediaStatusUpdated();
                     }
                 });
@@ -414,7 +407,7 @@ public class FlingVideoManager {
                 });
 
         try {
-            Fling.FlingApi.setMessageReceivedCallbacks(mApiClient,
+            Flint.FlintApi.setMessageReceivedCallbacks(mApiClient,
                     mMediaPlayer.getNamespace(), mMediaPlayer);
         } catch (IOException e) {
             Log.w(TAG, "Exception while launching application", e);
@@ -424,7 +417,7 @@ public class FlingVideoManager {
     private void detachMediaPlayer() {
         if ((mMediaPlayer != null) && (mApiClient != null)) {
             try {
-                Fling.FlingApi.removeMessageReceivedCallbacks(mApiClient,
+                Flint.FlintApi.removeMessageReceivedCallbacks(mApiClient,
                         mMediaPlayer.getNamespace());
             } catch (IOException e) {
                 Log.w(TAG, "Exception while detaching media player", e);
@@ -434,7 +427,7 @@ public class FlingVideoManager {
     }
 
     /**
-     * Fling the media to receiver
+     * Flint the media to receiver
      * 
      * @param autoPlay
      */
@@ -512,7 +505,7 @@ public class FlingVideoManager {
             return;
         }
         try {
-            Fling.FlingApi.setVolume(mApiClient, volume / MAX_VOLUME_LEVEL);
+            Flint.FlintApi.setVolume(mApiClient, volume / MAX_VOLUME_LEVEL);
         } catch (IOException e) {
             Log.w(TAG, "Unable to change volume");
         } catch (IllegalStateException e) {
@@ -525,7 +518,7 @@ public class FlingVideoManager {
             return;
         }
         try {
-            Fling.FlingApi.setMute(mApiClient, on);
+            Flint.FlintApi.setMute(mApiClient, on);
         } catch (IOException e) {
             Log.w(TAG, "Unable to toggle mute");
         } catch (IllegalStateException e) {
@@ -555,7 +548,12 @@ public class FlingVideoManager {
         try {
             mMediaPlayer.setStreamMute(mApiClient, on).setResultCallback(
                     new MediaResultCallback(mContext
-                            .getString(R.string.mediaop_toggle_stream_mute)));
+                            .getString(R.string.mediaop_toggle_stream_mute)) {
+                        @Override
+                        protected void onFinished() {
+                            mStatusChangeListener.onMediaVolumeEnd();
+                        }
+                    });
         } catch (IllegalStateException e) {
             e.printStackTrace();
         }
@@ -582,7 +580,7 @@ public class FlingVideoManager {
     }
 
     private final class ApplicationConnectionResultCallback implements
-            ResultCallback<Fling.ApplicationConnectionResult> {
+            ResultCallback<Flint.ApplicationConnectionResult> {
         private final String mClassTag;
 
         public ApplicationConnectionResultCallback(String suffix) {

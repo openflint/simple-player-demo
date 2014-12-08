@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.infthink.fling.samples.videoplayer"
+    package="com.infthink.flint.samples.videoplayer"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -19,7 +19,7 @@
         android:theme="@style/Theme.AppCompat" >
 
         <activity
-            android:name="com.infthink.fling.samples.videoplayer.VideoPlayerActivity"
+            android:name="com.infthink.flint.samples.videoplayer.VideoPlayerActivity"
             android:label="@string/app_name"
             android:screenOrientation="portrait" >
             <intent-filter>
@@ -29,7 +29,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name="tv.matchstick.fling.service.FlingDeviceService" android:exported="false">
+        <service android:name="tv.matchstick.flint.service.FlintDeviceService" android:exported="false">
             <intent-filter>
                 <action android:name="android.media.MediaRouteProviderService" />
             </intent-filter>

@@ -1,11 +1,12 @@
-package com.infthink.fling.samples.videoplayer;
+package com.infthink.flint.samples.videoplayer;
 
 import java.util.concurrent.TimeUnit;
 
-import tv.matchstick.fling.Fling;
-import tv.matchstick.fling.MediaStatus;
-import tv.matchstick.fling.RemoteMediaPlayer;
+import com.infthink.flint.samples.videoplayer.R;
 
+import tv.matchstick.flint.Flint;
+import tv.matchstick.flint.MediaStatus;
+import tv.matchstick.flint.RemoteMediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -21,7 +22,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 public class VideoPlayerActivity extends ActionBarActivity implements
-        FlingStatusChangeListener {
+        FlintStatusChangeListener {
     private static final int AFTER_SEEK_DO_NOTHING = 0;
     private static final int AFTER_SEEK_PLAY = 1;
     private static final int AFTER_SEEK_PAUSE = 2;
@@ -61,13 +62,14 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     private boolean mSeeking;
     private boolean mIsUserSeeking;
     private boolean mIsUserAdjustingVolume;
+    private boolean mIsUserAdjustingMuted;
 
     private int mPlayerState;
 
     protected Handler mHandler;
     private Runnable mRefreshRunnable;
 
-    private FlingVideoManager mFlingVideoManager;
+    private FlintVideoManager mFlintVideoManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,9 +104,9 @@ public class VideoPlayerActivity extends ActionBarActivity implements
         mHandler = new Handler();
 
         String applicationId = "~samplemediaplayer";
-        Fling.FlingApi.setApplicationId(applicationId);
-        mFlingVideoManager = new FlingVideoManager(this, applicationId, this);
-        
+        Flint.FlintApi.setApplicationId(applicationId);
+        mFlintVideoManager = new FlintVideoManager(this, applicationId, this);
+
         setUpControls();
 
         mRefreshRunnable = new Runnable() {
@@ -112,8 +114,8 @@ public class VideoPlayerActivity extends ActionBarActivity implements
             public void run() {
                 if (!mSeeking) {
                     refreshPlaybackPosition(
-                            mFlingVideoManager.getMediaCurrentTime(),
-                            mFlingVideoManager.getMediaDuration());
+                            mFlintVideoManager.getMediaCurrentTime(),
+                            mFlintVideoManager.getMediaDuration());
                 }
                 updateStreamVolume();
                 updateButtonStates();
@@ -126,35 +128,35 @@ public class VideoPlayerActivity extends ActionBarActivity implements
         mStartMediaButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View arg0) {
-                mFlingVideoManager.loadMedia(mAutoplayCheckbox.isChecked());
+                mFlintVideoManager.loadMedia(mAutoplayCheckbox.isChecked());
             }
         });
         
         mLaunchAppButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFlingVideoManager.launchApplication();
+                mFlintVideoManager.launchApplication();
             }
         });
 
         mJoinAppButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFlingVideoManager.joinApplication();
+                mFlintVideoManager.joinApplication();
             }
         });
 
         mLeaveAppButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFlingVideoManager.leaveApplication();
+                mFlintVideoManager.leaveApplication();
             }
         });
 
         mStopAppButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFlingVideoManager.stopApplication();
+                mFlintVideoManager.stopApplication();
             }
         });
 
@@ -162,9 +164,9 @@ public class VideoPlayerActivity extends ActionBarActivity implements
             @Override
             public void onClick(View v) {
                 if (mPlayerState == PLAYER_STATE_PAUSED) {
-                    mFlingVideoManager.playMedia();
+                    mFlintVideoManager.playMedia();
                 } else {
-                    mFlingVideoManager.pauseMedia();
+                    mFlintVideoManager.pauseMedia();
                 }
             }
         });
@@ -172,7 +174,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
         mStopMediaButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFlingVideoManager.stopMedia();
+                mFlintVideoManager.stopMedia();
             }
         });
 
@@ -204,7 +206,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     }
 
     private void onSeekBarMoved(long position) {
-        if (!mFlingVideoManager.isMediaConnectioned())
+        if (!mFlintVideoManager.isMediaConnectioned())
             return;
 
         refreshPlaybackPosition(position, -1);
@@ -224,7 +226,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
             resumeState = RemoteMediaPlayer.RESUME_STATE_UNCHANGED;
         }
         mSeeking = true;
-        mFlingVideoManager.seekMedia(position, resumeState);
+        mFlintVideoManager.seekMedia(position, resumeState);
     }
 
     private void setCurrentDeviceName(String name) {
@@ -234,7 +236,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     private void refreshDeviceVolume(double percent, boolean muted) {
         if (!mIsUserAdjustingVolume) {
             mDeviceVolumeBar
-                    .setProgress((int) (percent * FlingVideoManager.MAX_VOLUME_LEVEL));
+                    .setProgress((int) (percent * FlintVideoManager.MAX_VOLUME_LEVEL));
         }
         mDeviceMuteCheckBox.setChecked(muted);
     }
@@ -251,7 +253,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
 
     private void setUpVolumeControls(final SeekBar volumeBar,
             final CheckBox muteCheckBox) {
-        volumeBar.setMax((int) FlingVideoManager.MAX_VOLUME_LEVEL);
+        volumeBar.setMax((int) FlintVideoManager.MAX_VOLUME_LEVEL);
         volumeBar.setProgress(0);
         volumeBar
                 .setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -260,10 +262,10 @@ public class VideoPlayerActivity extends ActionBarActivity implements
                         mIsUserAdjustingVolume = false;
                         volumeBar.setSecondaryProgress(0);
                         if (volumeBar == mDeviceVolumeBar) {
-                            mFlingVideoManager.setDeviceVolume(seekBar
+                            mFlintVideoManager.setDeviceVolume(seekBar
                                     .getProgress());
                         } else {
-                            mFlingVideoManager.setMediaVolume(seekBar
+                            mFlintVideoManager.setMediaVolume(seekBar
                                     .getProgress());
                         }
                     }
@@ -286,9 +288,10 @@ public class VideoPlayerActivity extends ActionBarActivity implements
                     public void onCheckedChanged(CompoundButton view,
                             boolean isChecked) {
                         if (muteCheckBox == mDeviceMuteCheckBox) {
-                            mFlingVideoManager.setDeviceMute(isChecked);
+                            mFlintVideoManager.setDeviceMute(isChecked);
                         } else {
-                            mFlingVideoManager.setMediaMute(isChecked);
+                            mIsUserAdjustingMuted = true;
+                            mFlintVideoManager.setMediaMute(isChecked);
                         }
                     }
                 });
@@ -320,13 +323,15 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     private void refreshStreamVolume(double percent, boolean muted) {
         if (!mIsUserAdjustingVolume) {
             mStreamVolumeBar
-                    .setProgress((int) (percent * FlingVideoManager.MAX_VOLUME_LEVEL));
+                    .setProgress((int) (percent * FlintVideoManager.MAX_VOLUME_LEVEL));
         }
-        mStreamMuteCheckBox.setChecked(muted);
+        if (!mIsUserAdjustingMuted) {
+            mStreamMuteCheckBox.setChecked(muted);
+        }
     }
 
     private void updateStreamVolume() {
-        MediaStatus mediaStatus = mFlingVideoManager.getMediaStatus();
+        MediaStatus mediaStatus = mFlintVideoManager.getMediaStatus();
         if (mediaStatus != null) {
             double streamVolume = mediaStatus.getStreamVolume();
             boolean muteState = mediaStatus.isMute();
@@ -351,13 +356,13 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     }
 
     private void updateButtonStates() {
-        boolean hasDeviceConnection = mFlingVideoManager.isDeviceConnectioned();
-        boolean hasAppConnection = mFlingVideoManager.isAppConnectioned();
-        boolean hasMediaConnection = mFlingVideoManager.isMediaConnectioned();
+        boolean hasDeviceConnection = mFlintVideoManager.isDeviceConnectioned();
+        boolean hasAppConnection = mFlintVideoManager.isAppConnectioned();
+        boolean hasMediaConnection = mFlintVideoManager.isMediaConnectioned();
         boolean hasMedia = false;
 
         if (hasMediaConnection) {
-            MediaStatus mediaStatus = mFlingVideoManager.getMediaStatus();
+            MediaStatus mediaStatus = mFlintVideoManager.getMediaStatus();
             if (mediaStatus != null) {
                 int mediaPlayerState = mediaStatus.getPlayerState();
                 int playerState = PLAYER_STATE_NONE;
@@ -451,14 +456,14 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mFlingVideoManager.destroy();
+        mFlintVideoManager.destroy();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.main, menu);
-        mFlingVideoManager.addMediaRouterButton(menu, R.id.media_route_menu_item);
+        mFlintVideoManager.addMediaRouterButton(menu, R.id.media_route_menu_item);
         return true;
     }
 
@@ -525,14 +530,14 @@ public class VideoPlayerActivity extends ActionBarActivity implements
 
     @Override
     public void onMediaStatusUpdated() {
-        MediaStatus mediaStatus = this.mFlingVideoManager.getMediaStatus();
+        MediaStatus mediaStatus = this.mFlintVideoManager.getMediaStatus();
         if ((mediaStatus != null)
                 && (mediaStatus.getPlayerState() == MediaStatus.PLAYER_STATE_IDLE)) {
             clearMediaState();
         }
 
-        refreshPlaybackPosition(mFlingVideoManager.getMediaCurrentTime(),
-                mFlingVideoManager.getMediaDuration());
+        refreshPlaybackPosition(mFlintVideoManager.getMediaCurrentTime(),
+                mFlintVideoManager.getMediaDuration());
         updateStreamVolume();
         updateButtonStates();
     }
@@ -562,5 +567,10 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     @Override
     public void onMediaSeekEnd() {
         mSeeking = false;
+    }
+
+    @Override
+    public void onMediaVolumeEnd() {
+        mIsUserAdjustingMuted = false;
     }
 }
