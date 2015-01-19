@@ -9,9 +9,8 @@
     <meta http-equiv="pragma" content="no-cache"/>
 
     <script type="text/javascript" src="jquery.min.js"></script>
-    <script src="http://openflint.github.io/flint-receiver-sdk/v1/receiver.js"></script>
-    <script src="http://openflint.github.io/flint-receiver-sdk/v1/receiver_wrapper.js"></script>
-    <script src="http://openflint.github.io/flint-receiver-sdk/v1/libs/mediaplayer.js"></script>
+    <script src="//openflint.github.io/flint-web-sdk/out/flint_receiver_sdk.js"></script>
+    <script src="//openflint.github.io/flint-web-sdk/out/libs/mediaplayer.js"></script>
     <style>
         html, body {
             margin: 0;
@@ -109,7 +108,7 @@
             $("#label").text("loadedmetadata");
         });
 
-        var receiverWrapper = new ReceiverManagerWrapper("~samplemediaplayer");
+        var receiverWrapper = new FlintReceiverManager("~samplemediaplayer");
         var player = new MediaPlayer(receiverWrapper, window.mediaElement);
         receiverWrapper.open();
     }
