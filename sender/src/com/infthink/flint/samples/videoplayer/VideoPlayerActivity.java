@@ -206,7 +206,7 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     }
 
     private void onSeekBarMoved(long position) {
-        if (!mFlintVideoManager.isMediaConnectioned())
+        if (!mFlintVideoManager.isMediaConnected())
             return;
 
         refreshPlaybackPosition(position, -1);
@@ -356,9 +356,9 @@ public class VideoPlayerActivity extends ActionBarActivity implements
     }
 
     private void updateButtonStates() {
-        boolean hasDeviceConnection = mFlintVideoManager.isDeviceConnectioned();
-        boolean hasAppConnection = mFlintVideoManager.isAppConnectioned();
-        boolean hasMediaConnection = mFlintVideoManager.isMediaConnectioned();
+        boolean hasDeviceConnection = mFlintVideoManager.isDeviceConnected();
+        boolean hasAppConnection = mFlintVideoManager.isAppConnected();
+        boolean hasMediaConnection = mFlintVideoManager.isMediaConnected();
         boolean hasMedia = false;
 
         if (hasMediaConnection) {

@@ -164,6 +164,7 @@ public class FlintVideoManager {
 
         if (mSelectedDevice == null) {
             detachMediaPlayer();
+            leaveApplication();
             if ((mApiClient != null) && mApiClient.isConnected()) {
                 mApiClient.disconnect();
             }
@@ -630,16 +631,16 @@ public class FlintVideoManager {
         }
     }
 
-    public boolean isDeviceConnectioned() {
+    public boolean isDeviceConnected() {
         return (mApiClient != null) && mApiClient.isConnected()
                 && !mWaitingForReconnect;
     }
 
-    public boolean isAppConnectioned() {
+    public boolean isAppConnected() {
         return (mAppMetadata != null) && !mWaitingForReconnect;
     }
 
-    public boolean isMediaConnectioned() {
+    public boolean isMediaConnected() {
         return (mMediaPlayer != null) && !mWaitingForReconnect;
     }
 
