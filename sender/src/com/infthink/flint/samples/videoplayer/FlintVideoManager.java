@@ -220,8 +220,6 @@ public class FlintVideoManager {
                 Log.d(TAG, "error requesting status", e);
             }
 
-            mStatusChangeListener.onConnected();
-
             if (mWaitingForReconnect) {
                 mWaitingForReconnect = false;
                 if ((connectionHint != null)
@@ -237,6 +235,8 @@ public class FlintVideoManager {
                     mStatusChangeListener.onNoLongerRunning(true);
                 }
             }
+
+            mStatusChangeListener.onConnected();
         }
 
         @Override
@@ -256,16 +256,20 @@ public class FlintVideoManager {
     private class FlintListener extends Flint.Listener {
         @Override
         public void onVolumeChanged() {
-            double volume = Flint.FlintApi.getVolume(mApiClient);
-            boolean isMute = Flint.FlintApi.isMute(mApiClient);
-            mStatusChangeListener.onVolumeChanged(volume, isMute);
+            if (mApiClient != null && mApiClient.isConnected()) {
+                double volume = Flint.FlintApi.getVolume(mApiClient);
+                boolean isMute = Flint.FlintApi.isMute(mApiClient);
+                mStatusChangeListener.onVolumeChanged(volume, isMute);
+            }
         }
 
         @Override
         public void onApplicationStatusChanged() {
-            String status = Flint.FlintApi.getApplicationStatus(mApiClient);
-            Log.d(TAG, "onApplicationStatusChanged; status=" + status);
-            mStatusChangeListener.onApplicationStatusChanged(status);
+            if (mApiClient != null && mApiClient.isConnected()) {
+                String status = Flint.FlintApi.getApplicationStatus(mApiClient);
+                Log.d(TAG, "onApplicationStatusChanged; status=" + status);
+                mStatusChangeListener.onApplicationStatusChanged(status);
+            }
         }
 
         @Override
@@ -598,13 +602,12 @@ public class FlintVideoManager {
                 ApplicationMetadata applicationMetadata = result
                         .getApplicationMetadata();
                 String applicationStatus = result.getApplicationStatus();
-
-                mStatusChangeListener
-                        .onApplicationConnectionResult(applicationStatus);
                 // setApplicationStatus(applicationStatus);
                 attachMediaPlayer();
                 mAppMetadata = applicationMetadata;
                 requestMediaStatus();
+                mStatusChangeListener
+                        .onApplicationConnectionResult(applicationStatus);
             }
         }
     }
